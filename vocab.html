@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>단어장 — 아빠 영어</title>
+<meta name="description" content="학습 문장에 쓰인 어휘 전체와 예문">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📖</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>단어장</h1>
+    <a class="navlink" href="index.html">학습으로</a>
+    <span class="sub" id="count"></span>
+    <button class="icon-btn" id="btn-theme" title="화면 밝기 전환" aria-label="화면 밝기 전환">◐</button>
+  </header>
+
+  <div class="card">
+    <input id="q" class="search" type="search" placeholder="영어 단어나 한글 뜻으로 검색" autocomplete="off" spellcheck="false">
+    <div class="row" style="margin-top:10px">
+      <button class="chip on" data-pos="all">전체</button>
+      <button class="chip" data-pos="숙어">숙어</button>
+      <button class="chip" data-pos="동">동사</button>
+      <button class="chip" data-pos="명">명사</button>
+      <button class="chip" data-pos="형부">형·부</button>
+      <div class="spacer"></div>
+      <button class="btn ghost sm" id="btn-mask">뜻 가리기</button>
+    </div>
+    <div class="foot" style="margin-top:10px;text-align:left">
+      단어를 누르면 그 단어가 실제로 쓰인 문장이 나옵니다.
+      학습 카드의 문장에 나오는 어휘만 담았습니다.
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+</div>
+
+<script src="data/chunks.js"></script>
+<script src="data/expand.js"></script>
+<script src="data/pp.js"></script>
+<script src="data/read.js"></script>
+<script src="data/vocab.js"></script>
+<script src="vocab-page.js"></script>
+</body>
+</html>

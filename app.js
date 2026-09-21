@@ -293,6 +293,54 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ── 단어장 룩업 ───────────────────────────
+  // 표제어와 등재된 활용형을 먼저 찾고, 없으면 -s/-ed/-ing 를 떼어 한 번 더 찾는다.
+  var VMAP = null;
+  function vmap() {
+    if (VMAP) return VMAP;
+    VMAP = {};
+    ((window.DATA && window.DATA.vocab) || []).forEach(function (v) {
+      [v.w].concat(v.f || []).forEach(function (k) {
+        k = k.toLowerCase();
+        if (!VMAP[k]) VMAP[k] = v;
+      });
+    });
+    return VMAP;
+  }
+  function lookup(word) {
+    var m = vmap(), w = String(word).toLowerCase().replace(/[^a-z']/g, '');
+    if (!w) return null;
+    if (m[w]) return m[w];
+    var tries = [];
+    if (w.length > 3 && /s$/.test(w)) tries.push(w.slice(0, -1));
+    if (w.length > 4 && /es$/.test(w)) tries.push(w.slice(0, -2));
+    if (w.length > 4 && /ies$/.test(w)) tries.push(w.slice(0, -3) + 'y');
+    if (w.length > 4 && /ed$/.test(w)) tries.push(w.slice(0, -2), w.slice(0, -1), w.slice(0, -3));
+    if (w.length > 5 && /ing$/.test(w)) tries.push(w.slice(0, -3), w.slice(0, -3) + 'e', w.slice(0, -4));
+    for (var i = 0; i < tries.length; i++) if (m[tries[i]]) return m[tries[i]];
+    return null;
+  }
+  // 문장에 쓰인 단어의 뜻을, 문장에 나온 순서대로 (중복 없이)
+  function wordsOf(sentence) {
+    var seen = {}, out = [];
+    String(sentence).split(/\s+/).forEach(function (raw) {
+      var v = lookup(raw);
+      if (!v || seen[v.w]) return;
+      seen[v.w] = 1; out.push(v);
+    });
+    return out;
+  }
+  function wordsHtml(sentence, open) {
+    var list = wordsOf(sentence);
+    if (!list.length) return '';
+    return '<details class="words"' + (open ? ' open' : '') + '>' +
+      '<summary>단어 ' + list.length + '개</summary><div class="wlist">' +
+      list.map(function (v) {
+        return '<div class="witem"><b>' + esc(v.w) + '</b>' +
+          '<i>' + esc(v.pos) + '</i><span>' + esc(v.ko) + '</span></div>';
+      }).join('') + '</div></details>';
+  }
+
   // ── DOM ───────────────────────────────────
   var $ = function (sel) { return document.querySelector(sel); };
   var viewHome = $('#view-home'), viewSession = $('#view-session'), viewResult = $('#view-result');
@@ -399,6 +447,7 @@
       '<div class="prompt-ko">' + esc(opts.ko) + '</div>' +
       (opts.hint ? '<div class="hint">' + opts.hint + '</div>' : '') +
       (opts.stage === 2 ? '<div class="skel">' + esc(skeleton(opts.answer)) + '</div>' : '') +
+      wordsHtml(opts.answer, opts.stage !== 3) +
       '<textarea class="answer" rows="2" spellcheck="false" autocapitalize="off" ' +
       'placeholder="영어로 입력 후 Enter"></textarea>' +
       '<div class="feedback"></div>' +
@@ -468,6 +517,7 @@
         (opts.above || '') +
         '<div class="prompt-ko">' + esc(opts.ko) + '</div>' +
         (opts.hint ? '<div class="hint">' + opts.hint + '</div>' : '') +
+        wordsHtml(opts.answer, true) +
         '<div class="built">' + (chosen.length
           ? chosen.map(function (p) { return '<span class="blk picked" data-undo="1">' + esc(p.t) + '</span>'; }).join('')
           : '<span class="built-empty">아래에서 순서대로 고르세요</span>') + '</div>' +
@@ -633,6 +683,7 @@
         '<div style="margin-top:12px;font-size:13px;color:var(--text-faint)">' + esc(d.topic) +
         ' · 왼쪽에서 오른쪽으로 한 방향. 되돌아가지 않는다.</div>' +
         '<div style="margin-top:10px">' + lines + '</div>' +
+        wordsHtml(d.whole, false) +
         (finished
           ? '<div class="whole">' + esc(d.whole) + '</div>' +
             '<div class="tip">' + esc(d.focus) + '</div>' +

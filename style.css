@@ -213,3 +213,67 @@ textarea.answer:disabled { opacity: .75; }
 .blk.picked { background: var(--accent-soft); border-color: var(--accent); }
 .blk.used { opacity: .28; cursor: default; }
 .blk.used:hover { border-color: var(--border); }
+
+/* ── 카드 안 단어 목록 ──────────────────── */
+.words { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.words > summary {
+  cursor: pointer; padding: 8px 12px; font-size: 13px; color: var(--text-dim);
+  list-style: none; user-select: none;
+}
+.words > summary::-webkit-details-marker { display: none; }
+.words > summary::before { content: '▸ '; color: var(--text-faint); }
+.words[open] > summary::before { content: '▾ '; }
+.words > summary:hover { color: var(--text); }
+.wlist { padding: 2px 12px 10px; display: grid; gap: 5px; }
+.witem { display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; line-height: 1.5; }
+.witem b { font-weight: 600; min-width: 108px; color: var(--text); }
+.witem i { font-style: normal; font-size: 11px; color: var(--text-faint); min-width: 32px; }
+.witem span { color: var(--text-dim); flex: 1; }
+.navlink {
+  font-size: 13px; color: var(--accent); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 7px; padding: 3px 10px;
+}
+.navlink:hover { background: var(--accent-soft); }
+@media (max-width: 520px) {
+  .witem { flex-wrap: wrap; gap: 4px 8px; }
+  .witem b { min-width: 0; }
+}
+
+/* ── 단어장 페이지 ─────────────────────── */
+.search {
+  width: 100%; font: inherit; font-size: 16px; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.search:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.chip {
+  font: inherit; font-size: 13px; cursor: pointer; padding: 5px 12px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
+}
+.chip:hover { border-color: var(--accent); }
+.chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.vcard { padding: 6px 0; }
+.vrow { padding: 9px 20px; border-top: 1px solid var(--border); cursor: pointer; }
+.vrow:first-child { border-top: none; }
+.vrow:hover { background: var(--surface-2); }
+.vhead { display: flex; gap: 10px; align-items: baseline; }
+.vw { font-size: 15.5px; font-weight: 600; min-width: 140px; }
+.vpos { font-style: normal; font-size: 11px; color: var(--text-faint); min-width: 34px; }
+.vko { color: var(--text-dim); font-size: 14.5px; flex: 1; }
+.vko.masked {
+  background: var(--surface-2); color: transparent; border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.vko.masked:hover { color: var(--text-dim); background: none; box-shadow: none; }
+.vex:empty { display: none; }
+.exline {
+  margin-top: 7px; font-size: 15px; line-height: 1.6; color: var(--text);
+  background: var(--surface-2); border-radius: 7px; padding: 9px 11px;
+}
+.exline .hl { color: var(--accent); font-weight: 650; }
+.exline.dim { color: var(--text-faint); font-size: 13.5px; }
+@media (max-width: 520px) {
+  .vhead { flex-wrap: wrap; gap: 4px 10px; }
+  .vw { min-width: 0; }
+  .vko { flex-basis: 100%; }
+}
