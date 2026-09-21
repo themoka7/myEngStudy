@@ -187,3 +187,29 @@ textarea.answer:disabled { opacity: .75; }
 }
 
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .95em; }
+
+/* ── 난이도 사다리 ─────────────────────── */
+/* 2단계: 첫 글자 뼈대 */
+.skel {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px; letter-spacing: .04em; color: var(--text-dim);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; margin-top: 12px; word-break: break-word;
+}
+/* 1단계: 덩어리 조립 */
+.built {
+  min-height: 52px; margin-top: 14px; padding: 9px;
+  background: var(--surface-2); border: 1px dashed var(--border); border-radius: 8px;
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start;
+}
+.built-empty { color: var(--text-faint); font-size: 14px; padding: 4px 3px; }
+.pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.blk {
+  font: inherit; font-size: 16px; line-height: 1.4; padding: 8px 12px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer;
+}
+.blk:hover { border-color: var(--accent); }
+.blk.picked { background: var(--accent-soft); border-color: var(--accent); }
+.blk.used { opacity: .28; cursor: default; }
+.blk.used:hover { border-color: var(--border); }

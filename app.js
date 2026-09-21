@@ -122,9 +122,61 @@
     var st = S.cards[id] || { box: 0, seen: 0, wrong: 0 };
     st.seen = (st.seen || 0) + 1;
     if (correct) st.box = Math.min(5, (st.box || 0) + 1);
-    else { st.box = Math.max(1, (st.box || 1) - 1); st.wrong = (st.wrong || 0) + 1; }
-    st.due = addDays(INTERVALS[st.box - 1]);
+    else { st.box = Math.max(0, (st.box || 0) - 1); st.wrong = (st.wrong || 0) + 1; }
+    st.due = addDays(INTERVALS[Math.max(0, st.box - 1)]);
     S.cards[id] = st;
+  }
+
+  // 난이도 사다리 — 같은 카드를 만날 때마다 한 단계 올라간다.
+  // 처음 보는 문장을 백지에 쓰라고 하면 못 쓰는 게 당연하다. 조립부터 시작한다.
+  //  1 조립  : 단어 덩어리를 순서대로 고르기 (타이핑 없음)
+  //  2 힌트  : 첫 글자만 보이는 상태에서 타이핑
+  //  3 백지  : 한글만 보고 타이핑
+  function stageOf(id) {
+    var box = (S.cards[id] && S.cards[id].box) || 0;
+    return box <= 0 ? 1 : box === 1 ? 2 : 3;
+  }
+  var STAGE_NAME = { 1: '조립', 2: '힌트', 3: '백지' };
+
+  // 문장을 의미 덩어리로 자른다.
+  // 전치사·소사는 앞에 붙이고(account + for), 한정사·조동사는 뒤에 붙인다(the + country's).
+  // 이렇게 잘라야 'account for' 가 한 조각으로 남아 청크 훈련이 된다.
+  var POST = /^(of|for|in|on|at|to|with|from|by|into|onto|over|under|off|out|up|down|as|than|that|which|who|whom|whose)$/;
+  var PRE = /^(the|a|an|its|his|her|their|our|my|your|this|these|those|about|around|nearly|almost|more|less|most|many|several|all|both|no|not|two|three|four|five|new|own|is|are|was|were|be|been|being|has|have|had|will|would|can|could|may|might|should|must|do|does|did|long|single|major|early|other)$/;
+  function blocks(sentence) {
+    var words = sentence.split(/\s+/).filter(Boolean), out = [], pend = [];
+    words.forEach(function (w) {
+      var core = w.replace(/[^A-Za-z']/g, '').toLowerCase();
+      if (POST.test(core) && !pend.length && out.length) {   // 앞 덩어리에 흡수
+        out[out.length - 1] += ' ' + w;
+        return;
+      }
+      pend.push(w);
+      if (!PRE.test(core)) { out.push(pend.join(' ')); pend = []; }
+    });
+    if (pend.length) {
+      if (out.length) out[out.length - 1] += ' ' + pend.join(' ');
+      else out.push(pend.join(' '));
+    }
+    while (out.length > 8) {                       // 조각이 너무 잘면 짧은 것끼리 합친다
+      var at = 0, best = 1e9;
+      for (var i = 0; i < out.length - 1; i++) {
+        var len = out[i].length + out[i + 1].length;
+        if (len < best) { best = len; at = i; }
+      }
+      out.splice(at, 2, out[at] + ' ' + out[at + 1]);
+    }
+    return out;
+  }
+
+  // 첫 글자만 남긴 뼈대. 3글자 이하 단어와 숫자는 그대로 둔다.
+  function skeleton(sentence) {
+    return sentence.split(/\s+/).map(function (w) {
+      var m = w.match(/[A-Za-z]+/);
+      if (!m || m[0].length <= 3) return w;
+      var core = m[0], at = w.indexOf(core);
+      return w.slice(0, at) + core[0] + core.slice(1).replace(/[A-Za-z]/g, '_') + w.slice(at + core.length);
+    }).join(' ');
   }
 
   function logDay(n, ok) {
@@ -346,6 +398,7 @@
       (opts.above || '') +
       '<div class="prompt-ko">' + esc(opts.ko) + '</div>' +
       (opts.hint ? '<div class="hint">' + opts.hint + '</div>' : '') +
+      (opts.stage === 2 ? '<div class="skel">' + esc(skeleton(opts.answer)) + '</div>' : '') +
       '<textarea class="answer" rows="2" spellcheck="false" autocapitalize="off" ' +
       'placeholder="영어로 입력 후 Enter"></textarea>' +
       '<div class="feedback"></div>' +
@@ -395,10 +448,92 @@
     });
   }
 
+  // 조립(1단계): 덩어리를 순서대로 골라 문장을 세운다. 타이핑이 없으니 처음 보는 문장도 넘어간다.
+  function assembleBlock(host, opts) {
+    var parts = blocks(opts.answer);
+    var pool = parts.map(function (t, i) { return { t: t, i: i }; });
+    for (var k = pool.length - 1; k > 0; k--) {          // 셔플
+      var r = Math.floor(Math.random() * (k + 1));
+      var tmp = pool[k]; pool[k] = pool[r]; pool[r] = tmp;
+    }
+    var chosen = [], settled = false, settledAt = 0;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'card';
+    host.appendChild(wrap);
+
+    function draw() {
+      wrap.innerHTML =
+        '<span class="tag ' + (opts.tagClass || '') + '">' + esc(opts.tag) + '</span>' +
+        (opts.above || '') +
+        '<div class="prompt-ko">' + esc(opts.ko) + '</div>' +
+        (opts.hint ? '<div class="hint">' + opts.hint + '</div>' : '') +
+        '<div class="built">' + (chosen.length
+          ? chosen.map(function (p) { return '<span class="blk picked" data-undo="1">' + esc(p.t) + '</span>'; }).join('')
+          : '<span class="built-empty">아래에서 순서대로 고르세요</span>') + '</div>' +
+        '<div class="pool">' + pool.map(function (p, n) {
+          var used = chosen.indexOf(p) >= 0;
+          return '<button class="blk' + (used ? ' used' : '') + '" data-pick="' + n + '"' +
+            (used ? ' disabled' : '') + '>' + esc(p.t) + '</button>';
+        }).join('') + '</div>' +
+        '<div class="feedback"></div>' +
+        '<div class="row end" style="margin-top:12px">' +
+        '<button class="btn ghost sm" data-act="undo"' + (chosen.length ? '' : ' disabled') + '>되돌리기</button>' +
+        '<button class="btn ghost sm" data-act="reveal">모르겠음</button>' +
+        '</div>';
+    }
+
+    function settle(correct) {
+      if (settled) return;
+      settled = true; settledAt = Date.now();
+      wrap.querySelector('.feedback').innerHTML =
+        '<div class="verdict ' + (correct ? 'ok' : 'bad') + '">' +
+        '<div class="head">' + (correct ? '정확합니다' : '다시 보겠습니다') + '</div>' +
+        '<div class="answer-line">' + diffHtml(chosen.map(function (p) { return p.t; }).join(' '), opts.answer) + '</div>' +
+        '</div>' + (opts.tip ? '<div class="tip">' + esc(opts.tip) + '</div>' : '');
+      wrap.querySelector('.row').innerHTML =
+        '<span class="foot" style="margin:0">Enter 로 다음</span><div class="spacer"></div>' +
+        '<button class="btn sm" data-act="next">다음</button>';
+      wrap.querySelector('[data-act="next"]').focus();
+      opts.onSettled && opts.onSettled(correct);
+    }
+
+    wrap.addEventListener('click', function (e) {
+      var el = e.target;
+      if (settled) { if (el.getAttribute && el.getAttribute('data-act') === 'next') opts.onNext(); return; }
+      var pick = el.getAttribute && el.getAttribute('data-pick');
+      var act = el.getAttribute && el.getAttribute('data-act');
+      if (pick !== null && pick !== undefined) {
+        chosen.push(pool[+pick]);
+        if (chosen.length === pool.length) {
+          draw();
+          settle(chosen.every(function (p, n) { return p.i === n; }));
+          return;
+        }
+        draw();
+      } else if (act === 'undo' || (el.getAttribute && el.getAttribute('data-undo'))) {
+        chosen.pop(); draw();
+      } else if (act === 'reveal') {
+        chosen = []; draw(); settle(false);
+      }
+    });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.isComposing) return;
+      e.preventDefault();
+      if (settled && Date.now() - settledAt > 350) opts.onNext();
+    });
+    draw();
+  }
+
+  function askOne(host, opts) {
+    (opts.stage === 1 ? assembleBlock : typingBlock)(host, opts);
+  }
+
   function renderSingle(host, card, opts) {
-    var correct = true;
-    typingBlock(host, {
-      tag: opts.tag, tagClass: opts.tagClass, above: opts.above,
+    var correct = true, stage = stageOf(card.id);
+    askOne(host, {
+      stage: stage,
+      tag: opts.tag + ' · ' + STAGE_NAME[stage], tagClass: opts.tagClass, above: opts.above,
       ko: opts.ko, hint: opts.hint, answer: opts.answer, tip: opts.tip,
       onSettled: function (c) { correct = c; },
       onNext: function () { finishCard(card, correct); }
@@ -418,13 +553,14 @@
   // 여러 문항을 순차로 푸는 카드(확장/과거분사)
   function renderSteps(host, card, cfg) {
     // cfg: { tag, tagClass, steps:[{ko, answer, above, hint, tip}], onAllDone }
-    var i = 0, allOk = true;
+    var i = 0, allOk = true, stage = stageOf(card.id);
     function step() {
       host.innerHTML = '';
       var s = cfg.steps[i];
       var correct = true;
-      typingBlock(host, {
-        tag: cfg.tag + ' ' + (i + 1) + '/' + cfg.steps.length, tagClass: cfg.tagClass,
+      askOne(host, {
+        stage: stage,
+        tag: cfg.tag + ' ' + (i + 1) + '/' + cfg.steps.length + ' · ' + STAGE_NAME[stage], tagClass: cfg.tagClass,
         above: s.above || '', ko: s.ko, hint: s.hint, answer: s.answer, tip: s.tip,
         onSettled: function (c) { correct = c; if (!c) allOk = false; },
         onNext: function () {
